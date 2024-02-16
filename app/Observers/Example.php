@@ -1,22 +1,19 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Observers;
 
-use App\Enums\MailStatus;
 use App\Models\Mail;
+use App\Enums\MailStatus;
 use Filament\Notifications\Notification;
-use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
 
-final class MailChangeStatusObserver implements ShouldHandleEventsAfterCommit
+
+class Example
 {
     /**
      * Handle the Mail "created" event.
      */
     public function created(Mail $mail): void
     {
-        //$user = $mail->updater;
         if ($mail->status->value === MailStatus::Sent->value) {
             $user = $mail->creator;
 
@@ -33,15 +30,7 @@ final class MailChangeStatusObserver implements ShouldHandleEventsAfterCommit
      */
     public function updated(Mail $mail): void
     {
-        if ($mail->status->value === MailStatus::Created->value) {
-            $user = $mail->updater;
-            Notification::make()
-                ->title('Mail Viewed')
-                ->info()
-                ->body('Mail has been viewed')
-                ->sendToDatabase($user);
-        }
-
+        //
     }
 
     /**
@@ -49,7 +38,7 @@ final class MailChangeStatusObserver implements ShouldHandleEventsAfterCommit
      */
     public function deleted(Mail $mail): void
     {
-
+        //
     }
 
     /**
@@ -57,7 +46,7 @@ final class MailChangeStatusObserver implements ShouldHandleEventsAfterCommit
      */
     public function restored(Mail $mail): void
     {
-
+        //
     }
 
     /**
@@ -65,6 +54,6 @@ final class MailChangeStatusObserver implements ShouldHandleEventsAfterCommit
      */
     public function forceDeleted(Mail $mail): void
     {
-
+        //
     }
 }

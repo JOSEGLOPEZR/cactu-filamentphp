@@ -59,7 +59,9 @@ final class WhatsappController extends Controller
                 $text = $message["text"]["body"];
                 $action = $this->extractAction($text);
                 if (!$this->validateAction($action)) {
-                    self::sendTextMessage($number_phone, "No se reconoce el comando: " . $action);
+                    //self::sendTextMessage($number_phone, "No se reconoce el comando: " . $action);
+                    self::sendTextMessage($number_phone, "Gracias por su respuesta, su mensaje redactado es:\n" . $action);
+
                     exit;
                 }
                 $this->executeCommand($number_phone, $action);
@@ -69,6 +71,21 @@ final class WhatsappController extends Controller
                 $this->executeCommand($number_phone, $action);
                 break;
             case 'image':
+                $imageData = file_get_contents($message["image"]["payload"]["url"]);
+                $imageName = $message["image"]["payload"]["id"] . '.' . $message["image"]["payload"]["file_size_original"] . '.' . pathinfo($message["image"]["payload"]["mime_type"], PATHINFO_EXTENSION);
+                $imagePath = 'images/' . $imageName;
+                file_put_contents(public_path($imagePath), $imageData);
+
+                
+                $this->saveContent($number_phone, [
+                'image' => [
+                    'path' => $imagePath,
+                    'name' => $imageName,
+                    'size' => $message["image"]["payload"]["file_size_original"],
+                    'mime' => $message["image"]["payload"]["mime_type"],
+                    'timestamp' => $timestamp,
+        ]
+    ]);
                 break;
         }
         $this->saveContent($number_phone, json_decode($payload, true));
@@ -137,17 +154,50 @@ final class WhatsappController extends Controller
                         [new Button(WhatsappCommands::ReplyNow->value, WhatsappCommands::ReplyNow->getLabel())]
                     );
                     break;
+                //empieza y llama a viewletter
                 case WhatsappCommands::ViewNow->value:
                     $mobile_number = MobileNumber::whereNumber("+" . $from)->firstOrFail();
                     $rows = Mail::findOrFail($id)->answers->map(function ($answer) use ($mobile_number) {
                         $buttonId = Child::class === get_class($mobile_number->mobile_numerable) ? $answer->id : (string)$answer->id;
-                        return new Button(WhatsappCommands::ViewLetter->value . ' ' . $answer->id, $buttonId);
+                        return new Button(WhatsappCommands::ViewLetter->value . ' ' .  $answer->id,  strval($buttonId));
                     });
-                    self::sendButtonReplyMessage($from, "Selecciona una carta para leerla", $rows->toArray());
+                    self::sendButtonReplyMessage($from, "Selecciona la carta para leerla", $rows->toArray());
                     Mail::whereId($id)->update(["status" => MailStatus::View]);
-                    whatsapp()->sendTextMessage($from, "{$status}");
+                    //whatsapp()->sendTextMessage($from, "{$status}");
+                    //whatsapp()->sendTemplate($from, "hello_world");
+
                     break;
-            }
+
+                case WhatsappCommands::ReplyNow->value:
+                    $answer = Answers::findOrFail($id);
+                    $data = $answer->content;
+
+                    self::saveContent(
+                        $from,
+                        $data
+                    );
+                    whatsapp()->sendTextMessage($from, "A continuación redacta tu carta. Recuerda iniciar con un saludo :D");
+
+
+                    //$answer = file_get_contents("php://input");
+
+                    // if($answer==null){
+                    //      exit;
+                    // }
+                    // $answer = json_decode($answer, true);
+
+                    // $mensaje = "Mensaje:".$answer["entry"][0]["changes"][0]["value"]["messages"][0] ?? null;
+
+                    // file_put_contents($answer->toArray(),$mensaje);
+                    // break;
+
+
+                    break;
+
+
+                    }
+
+
         } catch (Throwable $th) {
             self::sendTextMessage($from, $th->getMessage());
         }
